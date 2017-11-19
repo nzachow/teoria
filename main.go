@@ -1,6 +1,9 @@
 package main
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
 type state struct {
 	Name        string
@@ -31,7 +34,7 @@ func left(counter int) int {
 
 func main() {
 	// prepare tape
-	tape := []byte("aaaaaa")
+	tape := []byte("aaabaa")
 
 	// prepare machine
 	q0 := state{Name: "q0", Transitions: nil, Final: true}
@@ -47,21 +50,28 @@ func main() {
 }
 
 func run(start_state *state, tape []byte) []byte {
+	start := time.Now()
+	time_limit := 2 * time.Second
 	current_state := start_state
 	head_location := 0
 	for {
-		if (head_location < len(tape)) && (head_location >= 0) {
-			for _, t := range current_state.Transitions {
-				if tape[head_location] == (t.CurrentSymbol) {
-					tape[head_location] = t.NewSymbol
-					log.Printf("tape: %s, %v, %T",
-						tape, head_location, tape[head_location])
-					head_location = t.Action(head_location)
+		if time.Now().Sub(start) < time_limit {
+			if (head_location < len(tape)) && (head_location >= 0) {
+				for _, t := range current_state.Transitions {
+					if tape[head_location] == (t.CurrentSymbol) {
+						tape[head_location] = t.NewSymbol
+						log.Printf("tape: %s, %v, %T",
+							tape, head_location, tape[head_location])
+						head_location = t.Action(head_location)
+					}
 				}
+			} else {
+				log.Println("Execution finished")
+				return tape
 			}
 		} else {
-			log.Println("Execution finished")
-			return tape
+			log.Println("Time exceeded, halting execution")
+			return []byte{}
 		}
 	}
 }

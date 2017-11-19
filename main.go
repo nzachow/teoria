@@ -45,11 +45,12 @@ func main() {
 	current_state := &q0
 	head_location := 0
 	for {
-		if head_location < (len(tape) - 1) {
+		if (head_location < len(tape)) && (head_location >= 0) {
 			for _, t := range current_state.Transitions {
 				if tape[head_location] == (t.CurrentSymbol) {
 					tape[head_location] = t.NewSymbol
-					log.Printf("tape: %s, %v, %T", tape, head_location, tape[head_location])
+					log.Printf("tape: %s, %v, %T",
+						tape, head_location, tape[head_location])
 					head_location = t.Action(head_location)
 				}
 			}

@@ -16,9 +16,14 @@ func TestBasic(t *testing.T) {
 
 	// execute machine
 	result := run(&q0, tape)
-	expected := []byte("AAAAAA")
-	if !reflect.DeepEqual(result.Tape, expected) {
+	exp_tape := []byte("AAAAAA")
+	exp_steps := 6
+	if !reflect.DeepEqual(result.Tape, exp_tape) {
 		t.Error("Expected result does not match")
+	}
+
+	if result.Steps != exp_steps {
+		t.Error("Wrong number of steps")
 	}
 }
 
@@ -36,8 +41,13 @@ func TestInfiniteLoop(t *testing.T) {
 	// execute machine
 	result := run(&q0, tape)
 	expected := []byte{}
+	exp_steps := 3 // at least 3 steps
 	if !reflect.DeepEqual(result.Tape, expected) {
 		t.Error("Expected result does not match")
+	}
+
+	if result.Steps < exp_steps {
+		t.Error("Wrong number of steps")
 	}
 }
 
@@ -72,9 +82,14 @@ func TestLeftAndRight(t *testing.T) {
 
 	// execute machine
 	result := run(&q0, tape)
-	expected := []byte("aBaBAA")
-	if !reflect.DeepEqual(result.Tape, expected) {
+	exp_tape := []byte("aBaBAA")
+	exp_steps := 10
+	if !reflect.DeepEqual(result.Tape, exp_tape) {
 		t.Error("Expected result does not match")
+	}
+
+	if result.Steps != exp_steps {
+		t.Error("Wrong number of steps")
 	}
 }
 
@@ -119,9 +134,14 @@ func TestTwoStateMachine(t *testing.T) {
 
 	// execute machine
 	result := run(&q0, tape)
-	expected := []byte("ABaBAA")
-	if !reflect.DeepEqual(result.Tape, expected) {
+	exp_tape := []byte("ABaBAA")
+	exp_steps := 10
+	if !reflect.DeepEqual(result.Tape, exp_tape) {
 		t.Error("Expected result does not match")
+	}
+
+	if result.Steps != exp_steps {
+		t.Error("Wrong number of steps")
 	}
 }
 

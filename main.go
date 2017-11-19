@@ -51,6 +51,7 @@ func main() {
 func run(start_state *state, tape []byte) execution_result {
 	start := time.Now()
 	time_limit := 2 * time.Second
+	steps := 0
 	current_state := start_state
 	head_location := 0
 	for {
@@ -64,18 +65,19 @@ func run(start_state *state, tape []byte) execution_result {
 								tape, head_location, tape[head_location])
 							head_location = t.Action(head_location)
 							current_state = t.Destination
+							steps += 1
 						}
 					}
 				}
 			} else {
-				log.Println("Execution finished")
+				log.Println("Execution finished", steps)
 
-				res := execution_result{current_state.Final, 0, tape}
+				res := execution_result{current_state.Final, steps, tape}
 				return res
 			}
 		} else {
 			log.Println("Time exceeded, halting execution")
-			res := execution_result{false, 0, []byte{}}
+			res := execution_result{false, steps, []byte{}}
 			return res
 		}
 	}

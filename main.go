@@ -82,6 +82,7 @@ func run(start_state *state, tape []byte) []byte {
 							log.Printf("tape: %s, %v, %T",
 								tape, head_location, tape[head_location])
 							head_location = t.Action(head_location)
+							current_state = t.Destination
 						}
 					}
 				}

@@ -23,48 +23,14 @@ type transition struct {
 }
 
 func right(counter int) int {
-	log.Println("go right!")
 	return counter + 1
 }
 
 func left(counter int) int {
-	log.Println("go left!")
 	return counter - 1
 }
 
 func main() {
-	// prepare tape
-	// tape := []byte("aaabaa")
-
-	// // prepare machine
-	// q0 := state{Name: "q0", Transitions: nil, Final: true}
-	// t1 := transition{Destination: &q0,
-	// 	CurrentSymbol: []byte("a")[0],
-	// 	NewSymbol:     []byte("A")[0],
-	// 	Action:        right}
-	// q0.attach_transition(&t1)
-
-	// t2 := transition{Destination: &q0,
-	// 	CurrentSymbol: []byte("b")[0],
-	// 	NewSymbol:     []byte("B")[0],
-	// 	Action:        left}
-	// q0.attach_transition(&t2)
-
-	// t3 := transition{Destination: &q0,
-	// 	CurrentSymbol: []byte("A")[0],
-	// 	NewSymbol:     []byte("a")[0],
-	// 	Action:        right}
-	// q0.attach_transition(&t3)
-
-	// t4 := transition{Destination: &q0,
-	// 	CurrentSymbol: []byte("B")[0],
-	// 	NewSymbol:     []byte("B")[0],
-	// 	Action:        right}
-	// q0.attach_transition(&t4)
-
-	// // execute machine
-	// result := run(&q0, tape)
-	// log.Printf("Result on tape: %s", result)
 }
 
 func run(start_state *state, tape []byte) []byte {

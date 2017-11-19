@@ -124,3 +124,26 @@ func TestTwoStateMachine(t *testing.T) {
 		t.Error("Expected result does not match")
 	}
 }
+
+func TestAmbiguousTransition(t *testing.T) {
+	q0 := state{Name: "q1", Transitions: nil, Final: true}
+
+	// define trasitions
+	t0 := transition{Destination: &q0,
+		CurrentSymbol: []byte("a")[0],
+		NewSymbol:     []byte("a")[0],
+		Action:        right}
+	err := q0.attach_transition(&t0)
+	if err != nil {
+		t.Error("Error not expected")
+	}
+
+	t1 := transition{Destination: &q0,
+		CurrentSymbol: []byte("a")[0],
+		NewSymbol:     []byte("A")[0],
+		Action:        right}
+	err = q0.attach_transition(&t1)
+	if err == nil {
+		t.Error("Expected error, got nil")
+	}
+}

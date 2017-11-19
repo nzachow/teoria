@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"time"
 )
@@ -11,8 +12,15 @@ type state struct {
 	Final       bool
 }
 
-func (s *state) attach_transition(t *transition) {
+func (s *state) attach_transition(t *transition) error {
+	// prevent ambiguous transitions
+	for _, v := range s.Transitions {
+		if t.CurrentSymbol == v.CurrentSymbol {
+			return errors.New("Cannot add ambiguous transition")
+		}
+	}
 	s.Transitions = append(s.Transitions, t)
+	return nil
 }
 
 type transition struct {

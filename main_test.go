@@ -17,7 +17,7 @@ func TestBasic(t *testing.T) {
 	// execute machine
 	result := run(&q0, tape)
 	expected := []byte("AAAAAA")
-	if !reflect.DeepEqual(result, expected) {
+	if !reflect.DeepEqual(result.Tape, expected) {
 		t.Error("Expected result does not match")
 	}
 }
@@ -36,7 +36,7 @@ func TestInfiniteLoop(t *testing.T) {
 	// execute machine
 	result := run(&q0, tape)
 	expected := []byte{}
-	if !reflect.DeepEqual(result, expected) {
+	if !reflect.DeepEqual(result.Tape, expected) {
 		t.Error("Expected result does not match")
 	}
 }
@@ -73,7 +73,7 @@ func TestLeftAndRight(t *testing.T) {
 	// execute machine
 	result := run(&q0, tape)
 	expected := []byte("aBaBAA")
-	if !reflect.DeepEqual(result, expected) {
+	if !reflect.DeepEqual(result.Tape, expected) {
 		t.Error("Expected result does not match")
 	}
 }
@@ -120,7 +120,7 @@ func TestTwoStateMachine(t *testing.T) {
 	// execute machine
 	result := run(&q0, tape)
 	expected := []byte("ABaBAA")
-	if !reflect.DeepEqual(result, expected) {
+	if !reflect.DeepEqual(result.Tape, expected) {
 		t.Error("Expected result does not match")
 	}
 }

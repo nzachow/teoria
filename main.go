@@ -23,6 +23,13 @@ func (s *state) attach_transition(t *transition) error {
 	return nil
 }
 
+type execution_result struct {
+	// finished on a final state ?
+	FinalState bool
+	Steps      int
+	Tape       []byte
+}
+
 type transition struct {
 	Destination   *state
 	CurrentSymbol byte
@@ -41,7 +48,7 @@ func left(counter int) int {
 func main() {
 }
 
-func run(start_state *state, tape []byte) []byte {
+func run(start_state *state, tape []byte) execution_result {
 	start := time.Now()
 	time_limit := 2 * time.Second
 	current_state := start_state
@@ -62,11 +69,14 @@ func run(start_state *state, tape []byte) []byte {
 				}
 			} else {
 				log.Println("Execution finished")
-				return tape
+
+				res := execution_result{current_state.Final, 0, tape}
+				return res
 			}
 		} else {
 			log.Println("Time exceeded, halting execution")
-			return []byte{}
+			res := execution_result{false, 0, []byte{}}
+			return res
 		}
 	}
 }

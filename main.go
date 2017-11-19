@@ -42,7 +42,12 @@ func main() {
 	q0.attach_transition(&t1)
 
 	// execute machine
-	current_state := &q0
+	result := run(&q0, tape)
+	log.Printf("Result on tape: %s", result)
+}
+
+func run(start_state *state, tape []byte) []byte {
+	current_state := start_state
 	head_location := 0
 	for {
 		if (head_location < len(tape)) && (head_location >= 0) {
@@ -56,8 +61,7 @@ func main() {
 			}
 		} else {
 			log.Println("Execution finished")
-			log.Println("Final tape: ", tape)
-			return
+			return tape
 		}
 	}
 }

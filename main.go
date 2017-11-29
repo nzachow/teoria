@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -46,6 +45,10 @@ type transition struct {
 	Name          string
 }
 
+func (t *transition) String() string {
+	return "< Tname=" + t.Name + ": Current " + string(t.CurrentSymbol) + " Dest " + t.Destination.Name + " > "
+}
+
 func (t *transition) set_destination(d *state) {
 	t.Destination = d
 }
@@ -63,7 +66,10 @@ func main() {
 	// networking code
 	router := mux.NewRouter()
 	router.HandleFunc("/send", handleWrapper(receive_machine)).Methods("POST", "OPTIONS")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	// log.Fatal(http.ListenAndServe(":8080", router))
+	cert := "/etc/letsencrypt/live/teoria.nicolas.eti.br/fullchain.pem"
+	key := "/etc/letsencrypt/live/teoria.nicolas.eti.br/privkey.pem"
+	log.Fatal(http.ListenAndServeTLS(":8080", cert, key, router))
 }
 
 type receive_data struct {
@@ -104,6 +110,10 @@ func receive_machine(w http.ResponseWriter, req *http.Request) {
 		log.Println("machine: ", data.Machine_name)
 		log.Println("struct", data)
 
+		if data.Word == "*" {
+			respondWithError(w, http.StatusBadRequest, "Dados incompletos")
+			return
+		}
 		// {"machineName":"Minha máquina",
 		// "word":"",
 		// "transitions":[
@@ -122,24 +132,39 @@ func receive_machine(w http.ResponseWriter, req *http.Request) {
 				f = left
 			}
 
-			new_transition := transition{Destination: nil,
-				CurrentSymbol: []byte(t.TransitionSymbol)[0], NewSymbol: []byte(t.WriteSymbol)[0],
-				Action: f, TargetString: t.TargetState, Name: t.Name}
-			log.Println("created transition: ", new_transition)
-			transitions = append(transitions, new_transition)
+			if t.Action != "" {
+				if (t.Action == "R") || (t.Action == "L") {
+					if (t.TransitionSymbol != "") && (t.WriteSymbol != "") {
+						new_transition := transition{Destination: nil,
+							CurrentSymbol: []byte(t.TransitionSymbol)[0], NewSymbol: []byte(t.WriteSymbol)[0],
+							Action: f, TargetString: t.TargetState, Name: t.Name}
+						log.Println("created transition: ", new_transition)
+						transitions = append(transitions, new_transition)
+					}
+				} else {
+					respondWithError(w, http.StatusBadRequest, "Dados incompletos")
+					return
+
+				}
+			}
 		}
 
 		var states []state
 		for _, s := range data.States {
-			new_state := state{Name: s.Name, Transitions: nil, Final: s.IsFinal}
-			states = append(states, new_state)
-			for _, trn := range s.Transitions {
-				for i, v := range transitions {
-					if v.Name == trn {
-						log.Println("adding :", transitions[i].Name, "to : ", s.Name)
-						states[len(states)-1].attach_transition(&transitions[i])
+			if s.Name != "" {
+				new_state := state{Name: s.Name, Transitions: nil, Final: s.IsFinal}
+				states = append(states, new_state)
+				for _, trn := range s.Transitions {
+					for i, v := range transitions {
+						if v.Name == trn {
+							log.Println("adding :", transitions[i].Name, "to : ", s.Name)
+							states[len(states)-1].attach_transition(&transitions[i])
+						}
 					}
 				}
+			} else {
+				respondWithError(w, http.StatusBadRequest, "Dados incompletos")
+				return
 			}
 		}
 
@@ -160,11 +185,26 @@ func receive_machine(w http.ResponseWriter, req *http.Request) {
 		log.Println("states: ", states)
 		log.Println("transitions: ", transitions)
 		// log.Println("w: ",
-		data.Word = strings.Replace(data.Word, "β", "", -1)
-		r := run(&states[0], []byte(data.Word))
+		// data.Word = strings.Replace(data.Word, "β", "", -1)
+		var wdr [][]byte
+		for _, c := range data.Word {
+			wdr = append(wdr, []byte(string(c)))
+		}
+		// r := run(&states[0], []byte(data.Word))
+		r := run(&states[0], wdr)
 
 		json.NewEncoder(w).Encode(r)
 	}
+}
+
+func respondWithError(w http.ResponseWriter, code int, message string) {
+	respondWithJSON(w, code, map[string]string{"error": message})
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	response, _ := json.Marshal(payload)
+	w.WriteHeader(code)
+	w.Write(response)
 }
 
 func handleWrapper(f func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
@@ -179,7 +219,7 @@ func handleWrapper(f func(http.ResponseWriter, *http.Request)) func(http.Respons
 	}
 }
 
-func run(start_state *state, tape []byte) execution_result {
+func run(start_state *state, tape [][]byte) execution_result {
 	start := time.Now()
 	time_limit := 5 * time.Second
 	steps := 0
@@ -187,21 +227,38 @@ func run(start_state *state, tape []byte) execution_result {
 	head_location := 0
 	for {
 		if time.Now().Sub(start) < time_limit {
-			if (head_location < len(tape)) && (head_location >= 0) {
+			// log.Println("Current state: ", current_state.Name, " has ", len(current_state.Transitions), " transitions")
+			var flag bool
+			flag = false
+			if ((head_location < len(tape)) && (head_location >= 0)) &&
+				(len(current_state.Transitions) != 0) {
 				for _, t := range current_state.Transitions {
-					if head_location < len(tape) {
-						if tape[head_location] == (t.CurrentSymbol) {
-							tape[head_location] = t.NewSymbol
+					if head_location < len(tape) && !flag {
+						// bytes.Compare
+						// if tape[head_location] == (t.CurrentSymbol) {
+						if tape[head_location][:] == (t.CurrentSymbol[:]) {
+							log.Println("On state: ", current_state.Name)
+							log.Printf("Available transitions: %+v", current_state.Transitions)
+							log.Println("Executing transition : ", t.Name)
+							log.Printf("Tape has %v, transition on %v ", string(tape[head_location]), string(t.CurrentSymbol))
 							log.Printf("tape: %s, %v, %T",
 								tape, head_location, tape[head_location])
+							log.Println("Going to state: ", t.Destination.Name)
+							log.Println(" ----------")
+							tape[head_location] = t.NewSymbol
 							head_location = t.Action(head_location)
 							current_state = t.Destination
 							steps += 1
+							flag = true
 						}
 					}
 				}
+				flag = false
 			} else {
 				log.Println("Execution finished", steps)
+				log.Println("Steps:", steps)
+				log.Println("Final state:", current_state)
+				log.Println("Final state final?:", current_state.Final)
 
 				res := execution_result{current_state.Final, steps, tape}
 				return res

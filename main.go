@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"log"
@@ -19,7 +20,7 @@ type state struct {
 func (s *state) attach_transition(t *transition) error {
 	// prevent ambiguous transitions
 	for _, v := range s.Transitions {
-		if t.CurrentSymbol == v.CurrentSymbol {
+		if bytes.Equal(t.CurrentSymbol[:], v.CurrentSymbol[:]) {
 			return errors.New("Cannot add ambiguous transition")
 		}
 	}
@@ -31,22 +32,22 @@ type execution_result struct {
 	// finished on a final state ?
 	FinalState bool
 	Steps      int
-	Tape       []byte
+	Tape       [][]byte
 }
 
 //     {"name":"transition11","targetState":"q1","transitionSymbol":"β","writeSymbol":"X","action":"R"},
 
 type transition struct {
 	Destination   *state
-	CurrentSymbol byte
-	NewSymbol     byte
+	CurrentSymbol []byte
+	NewSymbol     []byte
 	Action        func(int) int
 	TargetString  string
 	Name          string
 }
 
 func (t *transition) String() string {
-	return "< Tname=" + t.Name + ": Current " + string(t.CurrentSymbol) + " Dest " + t.Destination.Name + " > "
+	return "< Tname=" + t.Name + ": Current " + string(t.CurrentSymbol) + " Dest " + t.Destination.Name + " > \n"
 }
 
 func (t *transition) set_destination(d *state) {
@@ -136,8 +137,9 @@ func receive_machine(w http.ResponseWriter, req *http.Request) {
 				if (t.Action == "R") || (t.Action == "L") {
 					if (t.TransitionSymbol != "") && (t.WriteSymbol != "") {
 						new_transition := transition{Destination: nil,
-							CurrentSymbol: []byte(t.TransitionSymbol)[0], NewSymbol: []byte(t.WriteSymbol)[0],
-							Action: f, TargetString: t.TargetState, Name: t.Name}
+							CurrentSymbol: []byte(t.TransitionSymbol),
+							NewSymbol:     []byte(t.WriteSymbol),
+							Action:        f, TargetString: t.TargetState, Name: t.Name}
 						log.Println("created transition: ", new_transition)
 						transitions = append(transitions, new_transition)
 					}
@@ -191,6 +193,7 @@ func receive_machine(w http.ResponseWriter, req *http.Request) {
 			wdr = append(wdr, []byte(string(c)))
 		}
 		// r := run(&states[0], []byte(data.Word))
+		log.Printf("Received word: %v", wdr)
 		r := run(&states[0], wdr)
 
 		json.NewEncoder(w).Encode(r)
@@ -236,7 +239,9 @@ func run(start_state *state, tape [][]byte) execution_result {
 					if head_location < len(tape) && !flag {
 						// bytes.Compare
 						// if tape[head_location] == (t.CurrentSymbol) {
-						if tape[head_location][:] == (t.CurrentSymbol[:]) {
+
+						// log.Printf("%v ?? %v", tape[head_location][:], t.CurrentSymbol[:])
+						if bytes.Equal(tape[head_location], (t.CurrentSymbol)) {
 							log.Println("On state: ", current_state.Name)
 							log.Printf("Available transitions: %+v", current_state.Transitions)
 							log.Println("Executing transition : ", t.Name)
@@ -254,6 +259,7 @@ func run(start_state *state, tape [][]byte) execution_result {
 					}
 				}
 				flag = false
+
 			} else {
 				log.Println("Execution finished", steps)
 				log.Println("Steps:", steps)
@@ -265,7 +271,7 @@ func run(start_state *state, tape [][]byte) execution_result {
 			}
 		} else {
 			log.Println("Time exceeded, halting execution")
-			res := execution_result{false, steps, []byte{}}
+			res := execution_result{false, steps, [][]byte{}}
 			return res
 		}
 	}

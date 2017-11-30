@@ -224,7 +224,7 @@ func handleWrapper(f func(http.ResponseWriter, *http.Request)) func(http.Respons
 
 func run(start_state *state, tape [][]byte) execution_result {
 	start := time.Now()
-	time_limit := 5 * time.Second
+	time_limit := 1 * time.Second
 	steps := 0
 	current_state := start_state
 	head_location := 0

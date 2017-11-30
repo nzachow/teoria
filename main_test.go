@@ -46,7 +46,7 @@ func TestBasic(t *testing.T) {
 	}
 }
 
-func TestInfiniteLoop(t *testing.T) {
+func TestNoTrasitions(t *testing.T) {
 	tape := create_tape("aaaaba")
 
 	// prepare machine
@@ -61,6 +61,35 @@ func TestInfiniteLoop(t *testing.T) {
 	result := run(&q0, tape)
 	expected := [][]byte{}
 	exp_steps := 3 // at least 3 steps
+	if !reflect.DeepEqual(result.Tape, expected) {
+		t.Error("Expected result does not match")
+	}
+
+	if result.Steps < exp_steps {
+		t.Error("Wrong number of steps")
+	}
+}
+
+func TestInfiniteLoop(t *testing.T) {
+	tape := create_tape("aaaaba")
+
+	// prepare machine
+	q0 := state{Name: "q0", Transitions: nil, Final: true}
+	t1 := transition{Destination: &q0,
+		CurrentSymbol: []byte("a"),
+		NewSymbol:     []byte("a"),
+		Action:        right}
+	q0.attach_transition(&t1)
+	t2 := transition{Destination: &q0,
+		CurrentSymbol: []byte("b"),
+		NewSymbol:     []byte("b"),
+		Action:        left}
+	q0.attach_transition(&t2)
+
+	// execute machine
+	result := run(&q0, tape)
+	expected := [][]byte{}
+	exp_steps := 100 // at least 3 steps
 	if !reflect.DeepEqual(result.Tape, expected) {
 		t.Error("Expected result does not match")
 	}

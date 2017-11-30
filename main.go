@@ -35,8 +35,6 @@ type execution_result struct {
 	Tape       [][]byte
 }
 
-//     {"name":"transition11","targetState":"q1","transitionSymbol":"β","writeSymbol":"X","action":"R"},
-
 type transition struct {
 	Destination   *state
 	CurrentSymbol []byte
@@ -67,7 +65,6 @@ func main() {
 	// networking code
 	router := mux.NewRouter()
 	router.HandleFunc("/send", handleWrapper(receive_machine)).Methods("POST", "OPTIONS")
-	// log.Fatal(http.ListenAndServe(":8080", router))
 	cert := "/etc/letsencrypt/live/teoria.nicolas.eti.br/fullchain.pem"
 	key := "/etc/letsencrypt/live/teoria.nicolas.eti.br/privkey.pem"
 	log.Fatal(http.ListenAndServeTLS(":8080", cert, key, router))
@@ -102,28 +99,16 @@ func receive_machine(w http.ResponseWriter, req *http.Request) {
 		var data receive_data
 		err := decoder.Decode(&data)
 		if err != nil {
-			// panic(err)
-			log.Println("error :", err)
 			json.NewEncoder(w).Encode(err)
 			return
 		}
 		defer req.Body.Close()
-		log.Println("machine: ", data.Machine_name)
-		log.Println("struct", data)
 
 		if data.Word == "*" {
 			respondWithError(w, http.StatusBadRequest, "Dados incompletos")
 			return
 		}
-		// {"machineName":"Minha máquina",
-		// "word":"",
-		// "transitions":[
-		//  {"name":"transition11","targetState":"q1","transitionSymbol":"β","writeSymbol":"X","action":"R"},
-		//  {"name":"transition21","targetState":"q3","transitionSymbol":"*","writeSymbol":"Y","action":"R"},
-		//  {"name":"transition12","targetState":"q1","transitionSymbol":"β","writeSymbol":"X","action":"R"},
-		//  {"name":"transition22","targetState":"q0","transitionSymbol":"*","writeSymbol":"X","action":"L"}],
-		// "states":[{"name":"q0","transitions":["transition11","transition21"],"isFinal":false},
-		//     {"name":"q1","transitions":["transition12","transition22"],"isFinal":true}]}
+
 		var transitions []transition
 		for _, t := range data.Transtions {
 			var f func(int) int
@@ -170,30 +155,20 @@ func receive_machine(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		log.Println("states : ", states)
 		for ii, t := range transitions {
 			if t.Destination == nil {
 				for i, s := range states {
 					if s.Name == t.TargetString {
-						log.Println("destination of: ", t.Name, "should be: ", s.Name)
-						log.Println("setting destination to: ", &s)
-						log.Println("setting destination to: ", &states[i])
 						transitions[ii].set_destination(&states[i])
 					}
 				}
 			}
 		}
 
-		log.Println("states: ", states)
-		log.Println("transitions: ", transitions)
-		// log.Println("w: ",
-		// data.Word = strings.Replace(data.Word, "β", "", -1)
 		var wdr [][]byte
 		for _, c := range data.Word {
 			wdr = append(wdr, []byte(string(c)))
 		}
-		// r := run(&states[0], []byte(data.Word))
-		log.Printf("Received word: %v", wdr)
 		r := run(&states[0], wdr)
 
 		json.NewEncoder(w).Encode(r)
@@ -224,32 +199,18 @@ func handleWrapper(f func(http.ResponseWriter, *http.Request)) func(http.Respons
 
 func run(start_state *state, tape [][]byte) execution_result {
 	start := time.Now()
-	time_limit := 1 * time.Second
+	time_limit := 3 * time.Second
 	steps := 0
 	current_state := start_state
 	head_location := 0
 	for {
 		if time.Now().Sub(start) < time_limit {
-			// log.Println("Current state: ", current_state.Name, " has ", len(current_state.Transitions), " transitions")
 			var flag bool
 			flag = false
-			if ((head_location < len(tape)) && (head_location >= 0)) &&
-				(len(current_state.Transitions) != 0) {
+			if (head_location < len(tape)) && (head_location >= 0) {
 				for _, t := range current_state.Transitions {
 					if head_location < len(tape) && !flag {
-						// bytes.Compare
-						// if tape[head_location] == (t.CurrentSymbol) {
-
-						// log.Printf("%v ?? %v", tape[head_location][:], t.CurrentSymbol[:])
 						if bytes.Equal(tape[head_location], (t.CurrentSymbol)) {
-							log.Println("On state: ", current_state.Name)
-							log.Printf("Available transitions: %+v", current_state.Transitions)
-							log.Println("Executing transition : ", t.Name)
-							log.Printf("Tape has %v, transition on %v ", string(tape[head_location]), string(t.CurrentSymbol))
-							log.Printf("tape: %s, %v, %T",
-								tape, head_location, tape[head_location])
-							log.Println("Going to state: ", t.Destination.Name)
-							log.Println(" ----------")
 							tape[head_location] = t.NewSymbol
 							head_location = t.Action(head_location)
 							current_state = t.Destination
@@ -258,21 +219,23 @@ func run(start_state *state, tape [][]byte) execution_result {
 						}
 					}
 				}
+				if !flag {
+					break
+				}
 				flag = false
 
 			} else {
-				log.Println("Execution finished", steps)
-				log.Println("Steps:", steps)
-				log.Println("Final state:", current_state)
-				log.Println("Final state final?:", current_state.Final)
-
+				// execution completed
 				res := execution_result{current_state.Final, steps, tape}
 				return res
 			}
 		} else {
-			log.Println("Time exceeded, halting execution")
+			// time exceeded
 			res := execution_result{false, steps, [][]byte{}}
 			return res
 		}
 	}
+	// no more available transitions
+	res := execution_result{false, steps, [][]byte{}}
+	return res
 }

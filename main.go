@@ -207,7 +207,8 @@ func run(start_state *state, tape [][]byte) execution_result {
 		if time.Now().Sub(start) < time_limit {
 			var flag bool
 			flag = false
-			if (head_location < len(tape)) && (head_location >= 0) {
+			if (head_location < len(tape)) && (head_location >= 0) &&
+				(len(current_state.Transitions) != 0) {
 				for _, t := range current_state.Transitions {
 					if head_location < len(tape) && !flag {
 						if bytes.Equal(tape[head_location], (t.CurrentSymbol)) {
